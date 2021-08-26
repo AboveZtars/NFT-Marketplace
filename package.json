@@ -7,11 +7,12 @@
     "test": "hardhat test",
     "compile": "hardhat compile",
     "deploy": "hardhat deploy run scripts/simpleDeploy.js",
-    "prettier": "prettier --write 'contracts/**/*.sol'"
+    "prettier": "prettier --write contracts/**/*.sol"
   },
   "author": "Rafael Molina",
   "license": "ISC",
   "dependencies": {
+    "@chainlink/contracts": "^0.2.1",
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers@^0.3.0-beta.10",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
     "@openzeppelin/contracts": "^4.2.0",
