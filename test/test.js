@@ -10,6 +10,7 @@ const DAIUSD = "0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9";
 const ETHUSD = "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419";
 const LINKUSD = "0x2c1d072e956AFFC0D435Cb7AC38EF18d24d9127c";
 const pair = LINKUSD;
+
 // Start test block 1
 describe("NFT Marketplace without upgrades", function () {
   let NFTMarketplace;
@@ -68,6 +69,51 @@ describe("NFT Marketplace without upgrades", function () {
     expect(number).to.equal(4);
   }); */
 });
+
+
+
+
+
+// Start test block 2
+describe("NFT ERC1155 token", function () {
+  let NFT;
+  let accounts;
+
+  before("deploy NFT token contract", async () => {
+    accounts = await ethers.getSigners();
+    console.log("Deploying NFT token smart contract");
+    const NFTFactory = await ethers.getContractFactory(
+      "NFT"
+    );
+    NFT = await NFTFactory.deploy();
+    await NFT.deployed();
+  });
+
+  // Test case for minting tokens
+  it("Check minting", async function () {
+    //Mint 50 tokens
+    
+    await expect(await NFT.createToken())
+      .to.emit(NFT, 'idEvent')
+      .withArgs(1);
+    //NFT.on("idEvent", newItemId =>console.log(newItemId))
+    //expect().to.equal(1); //Verifying the owner
+  });
+  // Test case for checking the balance 
+  it("Cheking balance of tokens for address 1 of hardhat", async function () {
+    let amountOfTokens = await NFT.balanceOf(accounts[0].address,1);
+    expect(amountOfTokens).to.equal(50);
+  });
+
+  
+});
+
+
+
+
+
+
+
 
 /* // Start test block 2
 describe("NFT Marketplace with upgrades", function () {
