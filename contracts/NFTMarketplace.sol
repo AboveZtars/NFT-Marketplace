@@ -52,6 +52,7 @@ contract NFTMarketplace is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         address indexed nftContract,
         uint256 indexed tokenId,
         uint256 _amount,
+        uint256 offerBegin,
         uint256 _deadline,
         address payable owner,
         uint256 price
@@ -139,38 +140,48 @@ contract NFTMarketplace is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         ///@param _deadline The limit date to complete the offer
         ///@param owner The owner of the nft token
         ///@param price The price of the offer in USD
-
+        uint256 time = block.timestamp;
+        uint256 deadlineTime = time + _deadline;
         idToMarketOffer[offerId] = MarketOffer(
             offerId,
             _nftContract,
             _tokenId,
             _amount,
             block.timestamp,
-            _deadline,
+            deadlineTime,
             payable(msg.sender),
             _price
         );
+        
+        //console.log("block.timestamp",block.timestamp);
         emit ItemOfferCreated(
             offerId,
             _nftContract,
             _tokenId,
             _amount,
-            _deadline,
+            block.timestamp,
+            deadlineTime,
             payable(msg.sender),
             _price
         );
+        console.log("soliditydeadlineTime",deadlineTime);
         //Status unfinished
-        /* console.log(block.timestamp);
         emit Time(
             block.timestamp
-        ); */
+        );
     }
 
-    function acceptOffer(uint _offerId,address _pair) public view returns(uint){
+    function acceptOffer(uint _offerId,address _pair) public view returns(int){
         //ETHEREUM
+        int offerPrice = int(idToMarketOffer[_offerId].price);
+        int offerPriceInWei = getPriceInWei(offerPrice,_pair);
+        return offerPriceInWei;
+    }
+    //ganadora
+    function getPriceInWei(int _offerPrice,address _pair) public view returns(int){
         int ETHPrice = getLatestPrice(_pair);
-        uint tokenPrice = idToMarketOffer[_offerId].price;
-        return tokenPrice;
+        int offerPriceInWei = (_offerPrice*10**18/(ETHPrice/10**8));
+        return offerPriceInWei;
     }
 
     function getOffer(uint256 _offerId)
