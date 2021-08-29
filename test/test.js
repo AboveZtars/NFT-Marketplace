@@ -143,11 +143,21 @@ describe("NFT Marketplace", function () {
     expect(amountOfTokens).to.equal(50);
   });
 
+
+  //Deadline make to worked
   it("Cheking creation of offer", async function () {
-    await expect(await NFTMarketplace.connect(accounts[2]).createMarketOffer(NFT.address, 1, 25, 1, 100)) //time.duration.hours giving problems¿??????
+    const blockNum = await ethers.provider.getBlockNumber();
+    const block = await ethers.provider.getBlock(blockNum);
+    const timestamp = new BN(block.timestamp);
+    const jsdeadlinetime =1 + Number(timestamp) + Number(time.duration.years(1));
+    console.log("jstimestamp: "+timestamp);
+    console.log("jsdeadlinetime: "+jsdeadlinetime);
+    await expect(await NFTMarketplace.connect(accounts[2]).createMarketOffer(NFT.address, 1, 25, time.duration.years(1).toString(), 100)) 
       .to.emit(NFTMarketplace, "ItemOfferCreated") //
-      .withArgs(1, NFT.address, 1, 25,1, accounts[2].address, 100); //
+      .withArgs(1, NFT.address, 1, 25, timestamp, jsdeadlinetime, accounts[2].address, 100); //
   });
+
+
 
   /* // Test case creation of first offer
   it("Cheking creation of offer", async function () {
@@ -158,9 +168,8 @@ describe("NFT Marketplace", function () {
     const block = await ethers.provider.getBlock(blockNum);
     const timestamp = new BN(block.timestamp);
     
-    console.log(timestamp);
     //expect(timestamp).to.equal(now);
-    await expect(await NFTMarketplace.connect(accounts[2]).createMarketOffer(NFT.address, 1, 25, time.duration.years('1'), 100))
+    await expect(await NFTMarketplace.connect(accounts[2]).createMarketOffer(NFT.address, 1, 25, time.duration.years(1).toString(), 100))
       .to.emit(NFTMarketplace, "Time") //ItemOfferCreated
       .withArgs(timestamp); //1, NFT.address, 1, 25, await time.latest(),time.duration.years('1'), accounts[2].address, 100, true
   }); */
@@ -185,10 +194,10 @@ describe("NFT Marketplace", function () {
   }); */
 
   // Test case for accepting offer
-  it("Cheking oracle", async function () {
-    let price = await NFTMarketplace.acceptOffer(1,pair);
+  /* it("Cheking oracle", async function () {
+    let price = await NFTMarketplace.getPriceInWei(pair);
     console.log(price);
     //expect(amountOfTokens).to.equal(50);
-  });
+  }); */
 
 });
