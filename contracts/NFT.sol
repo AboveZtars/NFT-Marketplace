@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT 
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
@@ -10,15 +10,14 @@ contract NFT is ERC1155 {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
-    event idEvent(uint indexed newItemId);
+    event idEvent(uint256 indexed newItemId);
+
     constructor() ERC1155("") {}
 
-    function createToken() public returns (uint) {
+    function createToken(address _ownerOfNFT) public {
         _tokenIds.increment();
         uint256 newItemId = _tokenIds.current();
-
-        _mint(msg.sender, newItemId,50,"");
+        _mint(_ownerOfNFT, newItemId, 50, "");
         emit idEvent(newItemId);
-        return newItemId;
     }
 }
