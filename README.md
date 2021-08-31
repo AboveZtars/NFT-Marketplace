@@ -31,6 +31,8 @@ yarn deploy
 ```
 
 ## Accounts 
+This are the accounts that Hardhat provided us in order.
+Using them for testing.
 ```
 account[0] => Creator and owner 
 account[1] => Recipient
