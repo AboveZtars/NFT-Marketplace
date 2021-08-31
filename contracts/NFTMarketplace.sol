@@ -60,9 +60,7 @@ contract NFTMarketplace is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 price
     );
 
-    event OfferCanceled(
-        bool offerExist
-    );
+    event OfferCanceled(bool offerExist);
 
     ///MODIFIERS
     modifier lessthanowned(
@@ -109,8 +107,8 @@ contract NFTMarketplace is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         return c;
     }
 
-    ///@notice Latest price of the market 
-    ///@param _pair The pair to calculate ETH, DAI or LINK tokens 
+    ///@notice Latest price of the market
+    ///@param _pair The pair to calculate ETH, DAI or LINK tokens
     ///@dev Uses Chainlink oracle AggregatorV3Interface to get the price
     function getLatestPrice(address _pair) public view returns (int256) {
         AggregatorV3Interface priceFeed = AggregatorV3Interface(_pair);
@@ -145,7 +143,7 @@ contract NFTMarketplace is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         ///@param _deadline The limit date to complete the offer
         ///@param owner The owner of the nft token
         ///@param price The price of the offer in USD
-        ///@param offerExist Boolean parameter to know when the offer exist 
+        ///@param offerExist Boolean parameter to know when the offer exist
         idToMarketOffer[offerId] = MarketOffer(
             offerId,
             _nftContract,
@@ -157,7 +155,7 @@ contract NFTMarketplace is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             _price,
             true
         );
-        
+
         emit ItemOfferCreated(
             idToMarketOffer[offerId].offerId,
             idToMarketOffer[offerId].nftContract,
@@ -168,54 +166,124 @@ contract NFTMarketplace is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             idToMarketOffer[offerId].owner,
             idToMarketOffer[offerId].price
         );
-       
     }
 
-    function cancelOffer(uint _offerId)public {
-        require(idToMarketOffer[_offerId].owner == msg.sender,"The offer does not exist");
-        require(idToMarketOffer[_offerId].offerExist,"The offer does not exist");
+    function cancelOffer(uint256 _offerId) public {
+        require(
+            idToMarketOffer[_offerId].owner == msg.sender,
+            "The offer does not exist"
+        );
+        require(
+            idToMarketOffer[_offerId].offerExist,
+            "The offer does not exist"
+        );
 
         idToMarketOffer[_offerId].offerExist = false;
         emit OfferCanceled(idToMarketOffer[_offerId].offerExist);
     }
 
-    function acceptOffer(uint _offerId,address _pair) public {
-        require(idToMarketOffer[_offerId].offerExist,"The offer does not exist");
-        
+    function acceptOffer(uint256 _offerId, string memory _token)
+        public
+        payable
+    {
+        require(
+            idToMarketOffer[_offerId].offerExist,
+            "The offer does not exist"
+        );
+
         address _nftContract = idToMarketOffer[_offerId].nftContract;
-        uint _tokenId = idToMarketOffer[_offerId].tokenId;
-        uint balanceOfTokens = ERC1155Upgradeable(_nftContract).balanceOf(idToMarketOffer[_offerId].owner,_tokenId);
-        uint amount = idToMarketOffer[_offerId]._amount;
+        uint256 _tokenId = idToMarketOffer[_offerId].tokenId;
+        uint256 balanceOfTokens = ERC1155Upgradeable(_nftContract).balanceOf(
+            idToMarketOffer[_offerId].owner,
+            _tokenId
+        );
+        uint256 amount = idToMarketOffer[_offerId]._amount;
         address payable owner = idToMarketOffer[_offerId].owner;
-        
-        if (balanceOfTokens < amount){
+
+        if (balanceOfTokens < amount) {
             idToMarketOffer[_offerId].offerExist = false;
             revert("The offer is not available anymore");
         }
 
         //DAI
-        int offerPriceInDAI = getPriceInDAI(_offerId,_pair);
-        bool sent = ERC20Upgradeable(0x6B175474E89094C44Da98b954EedeAC495271d0F).transferFrom(msg.sender, owner, uint(offerPriceInDAI));
-        require(sent);
-        ERC1155Upgradeable(_nftContract).safeTransferFrom(owner,msg.sender,_tokenId, amount,"");
-        console.log("The transaction was:",sent);
+        if (
+            keccak256(abi.encodePacked((_token))) ==
+            keccak256(abi.encodePacked(("DAI")))
+        ) {
+            uint256 offerPriceInDAI = getPriceInDAI(_offerId);
+            bool sent = ERC20Upgradeable(
+                0x6B175474E89094C44Da98b954EedeAC495271d0F
+            ).transferFrom(msg.sender, owner, offerPriceInDAI);
+            require(sent);
+            ERC1155Upgradeable(_nftContract).safeTransferFrom(
+                owner,
+                msg.sender,
+                _tokenId,
+                amount,
+                ""
+            );
+        }
+
         //ETHEREUM
-        /* int offerPrice = int(idToMarketOffer[_offerId].price);
-        int offerPriceInWei = getPriceInWei(offerPrice,_pair); */
-        
-    }
-    //ganadora
-    function getPriceInWei(int _offerPrice,address _pair) public view returns(int){
-        int ETHPrice = getLatestPrice(_pair);
-        int offerPriceInWei = (_offerPrice*10**18/(ETHPrice/10**18));
-        return offerPriceInWei;
+        if (
+            keccak256(abi.encodePacked((_token))) ==
+            keccak256(abi.encodePacked(("ETH")))
+        ) {
+            uint256 offerPriceInETH = getPriceInETH(_offerId);
+            (bool sent, ) = owner.call{value: offerPriceInETH}("");
+            require(sent);
+            ERC1155Upgradeable(_nftContract).safeTransferFrom(
+                owner,
+                msg.sender,
+                _tokenId,
+                amount,
+                ""
+            );
+        }
+
+        //LINK
+        if (
+            keccak256(abi.encodePacked((_token))) ==
+            keccak256(abi.encodePacked(("LINK")))
+        ) {
+            uint256 offerPriceInLINK = getPriceInLINK(_offerId);
+            bool sent = ERC20Upgradeable(
+                0x514910771AF9Ca656af840dff83E8264EcF986CA
+            ).transferFrom(msg.sender, owner, offerPriceInLINK);
+            require(sent);
+            ERC1155Upgradeable(_nftContract).safeTransferFrom(
+                owner,
+                msg.sender,
+                _tokenId,
+                amount,
+                ""
+            );
+        }
     }
 
-    function getPriceInDAI(uint _offerId,address _pair) public view returns(int){
-        int DAIPrice = getLatestPrice(_pair);
-        int offerPriceInDAI =  int(idToMarketOffer[_offerId].price) * DAIPrice;
+    function getPriceInDAI(uint256 _offerId) public view returns (uint256) {
+        uint256 offerPriceInDAI = SafeMathUpgradeable.mul(uint256(idToMarketOffer[_offerId].price),1 *10**18);
         return offerPriceInDAI;
     }
+
+    function getPriceInETH(uint256 _offerId) public view returns (uint256) {
+        address DAIETH = 0x773616E4d11A78F511299002da57A0a94577F1f4;
+        uint256 ETHPrice = uint(getLatestPrice(DAIETH));
+        uint256 offerPriceInETH = SafeMathUpgradeable.mul(idToMarketOffer[_offerId].price,ETHPrice);
+        return offerPriceInETH;
+    }
+    
+    function getPriceInLINK(uint256 _offerId) public view returns (uint256) {
+        address LINKETH = 0xDC530D9457755926550b59e8ECcdaE7624181557;
+        uint256 LINKPrice = uint(getLatestPrice(LINKETH));
+        uint256 offerPriceInETH = getPriceInETH(_offerId);
+        uint256 offerPriceInLINK = SafeMathUpgradeable.mul(SafeMathUpgradeable.div((offerPriceInETH ),LINKPrice) , 1*10**18);
+        return offerPriceInLINK;
+    }
+
+    
+
+    
 
     function getOffer(uint256 _offerId)
         public
