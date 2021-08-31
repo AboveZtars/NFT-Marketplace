@@ -102,7 +102,7 @@ describe("NFT Marketplace", function () {
   let NFTMarketplace;
   let NFT;
   let accounts;
-  let erc20Contract;
+  
 
   before("deploy NFT Marketplace and NFT token contract", async () => {
     accounts = await ethers.getSigners();
@@ -139,6 +139,7 @@ describe("NFT Marketplace", function () {
     const balanceLINK = (await erc20ContractLINK.balanceOf(accounts[3].address)).toString();
 
     await erc20ContractDAI.connect(accounts[3]).approve(NFTMarketplace.address, constants.MAX_UINT256.toString());
+    await erc20ContractLINK.connect(accounts[3]).approve(NFTMarketplace.address, constants.MAX_UINT256.toString());
     await NFT.connect(accounts[2]).setApprovalForAll(NFTMarketplace.address,true);
     console.log("Balances of DAI: " + balanceDAI);
     console.log("Balances of LINK: " + balanceLINK);
@@ -227,9 +228,23 @@ describe("NFT Marketplace", function () {
       .withArgs(4, NFT.address, 1, 1, 1, accounts[2].address, 100, true);
   }); */
 
-  // Test case for accepting offer
-  it("Cheking accept Offer with DAI", async function () {
-    await NFTMarketplace.connect(accounts[3]).acceptOffer(1,pair);
+  /* // Test case for accepting offer ETH
+  it("Cheking accept Offer with ETH", async function () {
+    await NFTMarketplace.connect(accounts[3]).acceptOffer(1,"ETH",{value:ethers.utils.parseEther("1")});
+    
+    //expect(amountOfTokens).to.equal(50);
+  }); */
+
+  // Test case for accepting offer DAI
+  /* it("Cheking accept Offer with DAI", async function () {
+    await NFTMarketplace.connect(accounts[3]).acceptOffer(1,"DAI");
+    
+    //expect(amountOfTokens).to.equal(50);
+  }); */
+
+  // Test case for accepting offer LINK
+  it("Cheking accept Offer with LINK", async function () {
+    await NFTMarketplace.connect(accounts[3]).acceptOffer(1,"LINK");
     
     //expect(amountOfTokens).to.equal(50);
   });
