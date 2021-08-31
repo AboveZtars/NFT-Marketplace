@@ -8,6 +8,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 import "hardhat/console.sol";
 
@@ -42,6 +43,7 @@ contract NFTMarketplace is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 _deadline;
         address payable owner;
         uint256 price;
+        bool offerExist;
     }
     ///@dev To track offers
     mapping(uint256 => MarketOffer) private idToMarketOffer;
@@ -58,9 +60,10 @@ contract NFTMarketplace is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 price
     );
 
-    event Time(
-        uint time
+    event OfferCanceled(
+        bool offerExist
     );
+
     ///MODIFIERS
     modifier lessthanowned(
         address _nftContract,
@@ -131,6 +134,8 @@ contract NFTMarketplace is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         require(_price > 0, "Price must be at least 1 Dollar");
         _offerIds.increment();
         uint256 offerId = _offerIds.current();
+        uint256 time = block.timestamp;
+        uint256 deadlineTime = time + _deadline;
 
         ///@param offerId The Id of the offer in the marketplace
         ///@param _nftContract The address of the nft token
@@ -140,8 +145,7 @@ contract NFTMarketplace is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         ///@param _deadline The limit date to complete the offer
         ///@param owner The owner of the nft token
         ///@param price The price of the offer in USD
-        uint256 time = block.timestamp;
-        uint256 deadlineTime = time + _deadline;
+        ///@param offerExist Boolean parameter to know when the offer exist 
         idToMarketOffer[offerId] = MarketOffer(
             offerId,
             _nftContract,
@@ -150,38 +154,67 @@ contract NFTMarketplace is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             block.timestamp,
             deadlineTime,
             payable(msg.sender),
-            _price
+            _price,
+            true
         );
         
-        //console.log("block.timestamp",block.timestamp);
         emit ItemOfferCreated(
-            offerId,
-            _nftContract,
-            _tokenId,
-            _amount,
-            block.timestamp,
-            deadlineTime,
-            payable(msg.sender),
-            _price
+            idToMarketOffer[offerId].offerId,
+            idToMarketOffer[offerId].nftContract,
+            idToMarketOffer[offerId].tokenId,
+            idToMarketOffer[offerId]._amount,
+            idToMarketOffer[offerId].offerBegin,
+            idToMarketOffer[offerId]._deadline,
+            idToMarketOffer[offerId].owner,
+            idToMarketOffer[offerId].price
         );
-        console.log("soliditydeadlineTime",deadlineTime);
-        //Status unfinished
-        emit Time(
-            block.timestamp
-        );
+       
     }
 
-    function acceptOffer(uint _offerId,address _pair) public view returns(int){
+    function cancelOffer(uint _offerId)public {
+        require(idToMarketOffer[_offerId].owner == msg.sender,"The offer does not exist");
+        require(idToMarketOffer[_offerId].offerExist,"The offer does not exist");
+
+        idToMarketOffer[_offerId].offerExist = false;
+        emit OfferCanceled(idToMarketOffer[_offerId].offerExist);
+    }
+
+    function acceptOffer(uint _offerId,address _pair) public {
+        require(idToMarketOffer[_offerId].offerExist,"The offer does not exist");
+        
+        address _nftContract = idToMarketOffer[_offerId].nftContract;
+        uint _tokenId = idToMarketOffer[_offerId].tokenId;
+        uint balanceOfTokens = ERC1155Upgradeable(_nftContract).balanceOf(idToMarketOffer[_offerId].owner,_tokenId);
+        uint amount = idToMarketOffer[_offerId]._amount;
+        address payable owner = idToMarketOffer[_offerId].owner;
+        
+        if (balanceOfTokens < amount){
+            idToMarketOffer[_offerId].offerExist = false;
+            revert("The offer is not available anymore");
+        }
+
+        //DAI
+        int offerPriceInDAI = getPriceInDAI(_offerId,_pair);
+        bool sent = ERC20Upgradeable(0x6B175474E89094C44Da98b954EedeAC495271d0F).transferFrom(msg.sender, owner, uint(offerPriceInDAI));
+        require(sent);
+        ERC1155Upgradeable(_nftContract).safeTransferFrom(owner,msg.sender,_tokenId, amount,"");
+        console.log("The transaction was:",sent);
         //ETHEREUM
-        int offerPrice = int(idToMarketOffer[_offerId].price);
-        int offerPriceInWei = getPriceInWei(offerPrice,_pair);
-        return offerPriceInWei;
+        /* int offerPrice = int(idToMarketOffer[_offerId].price);
+        int offerPriceInWei = getPriceInWei(offerPrice,_pair); */
+        
     }
     //ganadora
     function getPriceInWei(int _offerPrice,address _pair) public view returns(int){
         int ETHPrice = getLatestPrice(_pair);
-        int offerPriceInWei = (_offerPrice*10**18/(ETHPrice/10**8));
+        int offerPriceInWei = (_offerPrice*10**18/(ETHPrice/10**18));
         return offerPriceInWei;
+    }
+
+    function getPriceInDAI(uint _offerId,address _pair) public view returns(int){
+        int DAIPrice = getLatestPrice(_pair);
+        int offerPriceInDAI =  int(idToMarketOffer[_offerId].price) * DAIPrice;
+        return offerPriceInDAI;
     }
 
     function getOffer(uint256 _offerId)
