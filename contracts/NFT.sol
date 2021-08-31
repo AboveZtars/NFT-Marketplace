@@ -17,7 +17,7 @@ contract NFT is ERC1155 {
     function createToken(address _ownerOfNFT) public {
         _tokenIds.increment();
         uint256 newItemId = _tokenIds.current();
-        _mint(_ownerOfNFT, newItemId, 50, "");
+        _mint(_ownerOfNFT, newItemId, 100, "");
         emit idEvent(newItemId);
     }
 }
