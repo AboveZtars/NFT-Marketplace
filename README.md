@@ -1,6 +1,6 @@
 # NFT Marketplace
 
-This is the Second Assignment for the EYSS academy.
+Simple Marketplace of 1155 Tokens
 
 ## Dependencies
 
